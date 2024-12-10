@@ -351,14 +351,14 @@ impl<'a, T: 'a, const N: usize> DoubleEndedIterator for Drain<'a, T, N> {
     }
 }
 
-impl<'a, T, const N: usize> ExactSizeIterator for Drain<'a, T, N> {
+impl<T, const N: usize> ExactSizeIterator for Drain<'_, T, N> {
     #[inline]
     fn len(&self) -> usize {
         self.iter.len()
     }
 }
 
-impl<'a, T, const N: usize> core::iter::FusedIterator for Drain<'a, T, N> {}
+impl<T, const N: usize> core::iter::FusedIterator for Drain<'_, T, N> {}
 
 impl<'a, T: 'a, const N: usize> Drop for Drain<'a, T, N> {
     fn drop(&mut self) {
@@ -1335,7 +1335,7 @@ impl<T, const N: usize> SmallVec<T, N> {
                 if !f(&mut *ptr.add(i)) {
                     del += 1;
                 } else if del > 0 {
-                    core::mem::swap(&mut *ptr.add(i), &mut *ptr.add(i - del));
+                    core::ptr::swap(ptr.add(i), ptr.add(i - del));
                 }
             }
         }
@@ -1386,7 +1386,7 @@ impl<T, const N: usize> SmallVec<T, N> {
                 if !same_bucket(&mut *p_r, &mut *p_wm1) {
                     if r != w {
                         let p_w = p_wm1.add(1);
-                        core::mem::swap(&mut *p_r, &mut *p_w);
+                        core::ptr::swap(p_r, p_w);
                     }
                     w += 1;
                 }
@@ -1449,39 +1449,35 @@ impl<T, const N: usize> SmallVec<T, N> {
     /// # Examples
     ///
     /// ```
-    /// use std::mem;
-    /// use std::ptr;
     /// use smallvec::{SmallVec, smallvec};
     ///
-    /// fn main() {
-    ///     let mut v: SmallVec<_, 1> = smallvec![1, 2, 3];
+    /// let mut v: SmallVec<_, 1> = smallvec![1, 2, 3];
     ///
-    ///     // Pull out the important parts of `v`.
-    ///     let p = v.as_mut_ptr();
-    ///     let len = v.len();
-    ///     let cap = v.capacity();
-    ///     let spilled = v.spilled();
+    /// // Pull out the important parts of `v`.
+    /// let p = v.as_mut_ptr();
+    /// let len = v.len();
+    /// let cap = v.capacity();
+    /// let spilled = v.spilled();
     ///
-    ///     unsafe {
-    ///         // Forget all about `v`. The heap allocation that stored the
-    ///         // three values won't be deallocated.
-    ///         mem::forget(v);
+    /// unsafe {
+    ///     // Forget all about `v`. The heap allocation that stored the
+    ///     // three values won't be deallocated.
+    ///     std::mem::forget(v);
     ///
-    ///         // Overwrite memory with [4, 5, 6].
-    ///         //
-    ///         // This is only safe if `spilled` is true! Otherwise, we are
-    ///         // writing into the old `SmallVec`'s inline storage on the
-    ///         // stack.
-    ///         assert!(spilled);
-    ///         for i in 0..len {
-    ///             ptr::write(p.add(i), 4 + i);
-    ///         }
-    ///
-    ///         // Put everything back together into a SmallVec with a different
-    ///         // amount of inline storage, but which is still less than `cap`.
-    ///         let rebuilt = SmallVec::<_, 2>::from_raw_parts(p, len, cap);
-    ///         assert_eq!(&*rebuilt, &[4, 5, 6]);
+    ///     // Overwrite memory with [4, 5, 6].
+    ///     //
+    ///     // This is only safe if `spilled` is true! Otherwise, we are
+    ///     // writing into the old `SmallVec`'s inline storage on the
+    ///     // stack.
+    ///     assert!(spilled);
+    ///     for i in 0..len {
+    ///         std::ptr::write(p.add(i), 4 + i);
     ///     }
+    ///
+    ///     // Put everything back together into a SmallVec with a different
+    ///     // amount of inline storage, but which is still less than `cap`.
+    ///     let rebuilt = SmallVec::<_, 2>::from_raw_parts(p, len, cap);
+    ///     assert_eq!(&*rebuilt, &[4, 5, 6]);
     /// }
     /// ```
     #[inline]
@@ -2108,7 +2104,7 @@ impl<T: Debug, const N: usize> Debug for IntoIter<T, N> {
     }
 }
 
-impl<'a, T: Debug, const N: usize> Debug for Drain<'a, T, N> {
+impl<T: Debug, const N: usize> Debug for Drain<'_, T, N> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("Drain").field(&self.iter.as_slice()).finish()
     }
