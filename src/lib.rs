@@ -1520,6 +1520,7 @@ impl<T, const N: usize> SmallVec<T, N> {
                 // At this point we either consumed all capacity or the iterator is exhausted (fused)
                 if let Some(item) = iter.next() {
                     self.push(item);
+                    len += 1;
                 } else {
                     return;
                 }
