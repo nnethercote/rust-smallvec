@@ -1502,11 +1502,11 @@ impl<T, const N: usize> SmallVec<T, N> {
         let mut iter = iter.fuse();
         let (lower_bound, _) = iter.size_hint();
         self.reserve(lower_bound);
-        let mut len = self.len();
         let mut capacity = self.capacity();
         let mut ptr = self.as_mut_ptr();
         unsafe {
             loop {
+                let mut len = self.len();
                 // SAFETY: ptr is valid for `capacity - len` writes
                 ptr = ptr.add(len);
                 let mut guard = DropGuard { ptr, len: 0 };
@@ -1520,7 +1520,6 @@ impl<T, const N: usize> SmallVec<T, N> {
                 // At this point we either consumed all capacity or the iterator is exhausted (fused)
                 if let Some(item) = iter.next() {
                     self.push(item);
-                    len += 1;
                 } else {
                     return;
                 }
